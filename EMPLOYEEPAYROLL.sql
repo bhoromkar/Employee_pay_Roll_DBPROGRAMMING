@@ -108,7 +108,7 @@ ADD CONSTRAINT FK_PayrollPeriodID
  FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID);
  
  --YYYY-MM-DD.
- insert into Employee (FirstName ,LastName ,DateofBirth ,EmpAddress , ContactNumber,HireDate ,Email ,DesignationId,DepartmentID )
+ insert into Employee (FirstName,LastName,DateofBirth,EmpAddress,ContactNumber,Email,DesignationId,DepartmentID )
  values('john' ,'smith', '1985-02-12','LONDON',21651661,'2016-12-10','JOHNSMITH@MAIL.COM' ,1,1),
 		('CHRIS' ,'LYNN', '1995-04-21','NEWYORK',55645645,'2018-02-10','CHRISLYNN@MAIL.COM' ,2,1),
 		('ROHIT' ,'KUMAR', '1990-05-11','DELHI',564646446,'2019-06-20','ROHITKUMAR@MAIL.COM' ,4,1),
@@ -192,4 +192,222 @@ GROUP BY EmpAddress;
 
 
 
+---- joins
+---Retrieve employee information along with their department names and designations
+select employee.firstname, employee.lastname, employee.employeeid, employee.dateofbirth,employee.empaddress,employee.contactnumber,Employee.Email,employee.hiredate, 
+Department.departmentname,Designation.DesignationName
+from employee
+inner join Department
+on employee.DepartmentID = department.DepartmentID
+inner join designation
+on employee.designationid = designation.designationid
 
+select * from Employee 
+
+--
+--Retrieve all employees and their corresponding salaries, if available
+--(SELECT ALL RECORD FROM LEFT and matchrd recored in right
+
+
+	
+	select employee.firstname, employee.lastname, employee.employeeid, employee.dateofbirth,employee.empaddress,employee.contactnumber,Employee.Email,employee.hiredate, 
+
+    salary.BasicSalary
+FROM
+    employee
+LEFT JOIN
+  salary   ON  employee.employeeid = salary.employeeid ;
+
+
+
+--------	RIGHT JOIN query:(ALL THE RECORD FROM RIGHT TABLE ABLE AND MATCHED RECORD FROM LEGT TABLE
+---Retrieve all salaries and the corresponding employee names, if available
+	
+	
+	select employee.firstname, employee.lastname, employee.employeeid, employee.dateofbirth,employee.empaddress,employee.contactnumber,Employee.Email,employee.hiredate, 
+    salary.BasicSalary
+FROM
+salary
+    right JOIN
+   employee  ON  salary.employeeid= employee.employeeid
+   WHERE BasicSalary IS NOT NULL;
+
+
+   select employee.firstname, employee.lastname, employee.employeeid, employee.dateofbirth,employee.empaddress,employee.contactnumber,Employee.Email,employee.hiredate, 
+
+    salary.BasicSalary
+FROM
+    employee
+RIGHT JOIN
+  salary   ON  employee.employeeid = salary.employeeid ;
+
+
+  SELECT * FROM EMPLOYEE;
+  SELECT * FROM SALARY;
+  ----OUTER JOIN
+  select employee.firstname, employee.lastname, employee.employeeid, employee.dateofbirth,employee.empaddress,employee.contactnumber,Employee.Email,employee.hiredate, 
+    salary.BasicSalary
+FROM
+salary   
+FULL OUTER JOIN
+   employee  ON  salary.employeeid= employee.employeeid
+
+
+create database userDB;
+use userDb;
+create table users(
+userId int primary key  identity(1,1) not null,
+Username NVARCHAR(255),
+Password NVARCHAR(255)
+)
+GO
+/*
+
+THROW [ error_number ,  
+        message ,  
+        state ];
+Code language: SQL (Structured Query Language) (sql)
+In this syntax:
+
+error_number
+The error_number is an integer that represents the exception. The error_number must be greater than 50,000 and less than or equal to 2,147,483,647.
+
+message
+The message is a string of type NVARCHAR(2048) that describes the exception.
+
+state
+The state is a TINYINT with the value between 0 and 255. The state indicates the state associated with the message.
+*/
+   ---- Create the stored procedure
+-- Create the stored procedure
+CREATE PROCEDURE ValidateUser
+    @Username NVARCHAR(255),
+    @Password NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+	BEGIN TRY
+    DECLARE @UserCount INT;
+
+    -- Check if the username already exists in the users table
+    SELECT @UserCount = COUNT(*)
+    FROM users
+    WHERE username = @Username;
+
+    -- If the username exists, raise an error
+    IF( @UserCount > 0)
+        PRINT 'Username exists.';
+    ELSE
+       INSERT INTO users (username, password)
+    VALUES (@Username, @Password);
+
+    PRINT 'User registered successfully.';
+END TRY
+BEGIN CATCH
+    PRINT 'An error occurred: ' + ERROR_MESSAGE();
+END CATCH
+
+    -- If the username is unique, insert the new user
+   
+END
+
+
+EXEC ValidateUser OMKAR1 ,OMKAR@20
+
+DROP PROC ValidateUser
+
+SELECT * FROM USERS
+DROP TABLE USERS
+GO
+
+
+use EmployeePayrollDB
+go
+
+CRE PROC SpCheckEmployeeByID
+@Employeeid int,
+@EmployeeExists int output 
+AS
+BEGIN
+/*
+Declare @firstname varchar(255),
+Declare @lastname varchar(255),
+Declare @DateofBirth date not null ,
+Declare @EmpAddress varchar(255) not null,
+Declare @ContactNumber bigint,
+Declare @Email varchar(255),
+Declare @HireDate date, 
+Declare @DesignationId int ,
+Declare @DepartmentID int,
+*/
+
+  IF EXISTS (SELECT 1 FROM employee WHERE employeeid = @EmployeeID)
+        SET @EmployeeExists = 1;  -- Employee exists
+    ELSE
+        SET @EmployeeExists = 0;  -- Employee does not exist
+	 EnD
+	 GO
+	 DECLARE @EmployeeIDToCheck INT = 123; -- Replace with the desired EmployeeID
+DECLARE @EmployeeExists BIT;
+	 exec SpCheckEmployeeByID 3 , output;
+	 IF @EmployeeExists = 1
+    PRINT 'Employee exists.';
+ELSE
+    PRINT 'Employee does not exist.';
+	select * from employee
+
+	go
+------ create a stored procedure that will take the
+--Employee ID of a person and checks if it is in the table. There are two
+--conditions It will create a new record if the Employee It is not stored in the table
+     ---If the record is already in the table, it willupdate that
+
+create proc SpEmployee
+	@Employeeid int,
+ @firstname varchar(255),
+ @lastname varchar(255),
+ @DateofBirth date ,
+ @EmpAddress varchar(255) ,
+ @ContactNumber bigint,
+ @Email varchar(255),
+ @HireDate date, 
+ @DesignationId int ,
+ @DepartmentID int
+ as 
+ begin
+ IF EXISTS (SELECT 1 FROM EMPLOYEE WHERE EmployeeID= @Employeeid)
+ begin
+ UPDATE EMPLOYEE SET FirstName = @firstname ,
+ LastName= @lastname,
+ DateofBirth=@DateofBirth ,
+ EmpAddress=@EmpAddress ,
+ ContactNumber=@ContactNumber,
+ HireDate= @HireDate,
+ Email=@Email ,
+ DesignationId=@DesignationId,
+ DepartmentID =@DepartmentID
+ WHERE EmployeeID= @Employeeid;
+ PRINT 'Employee Updated';
+ end
+ Else
+ begin
+ insert into employee  (FirstName,LastName,DateofBirth,EmpAddress,ContactNumber,Email, HireDate ,DesignationId,DepartmentID )
+ values   (@firstname,@lastname,@DateofBirth,@EmpAddress,@ContactNumber,@Email, @HireDate,@DesignationId,@DepartmentID )
+ print 'new Employee inserted succesfully';
+ end 
+ end 
+ go
+
+
+ DECLARE @employeeid  int = 14 ; 
+ IF EXISTS (SELECT 1 FROM EMPLOYEE WHERE EmployeeID= @Employeeid)
+ BEGIN 
+ PRINT 'EMPLOYEE IS ALREADY IN TABLE'
+ END
+ ELSE
+ BEGIN
+ exec SpEmployee 14,nklhjbn,kjhi,'1990-02-02',mumbai,46446499,'bjdb@mail.com','2020-01-01',2,2
+ END
+
+
+ select * from employee

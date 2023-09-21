@@ -1,4 +1,4 @@
-create database EmployeePayrollDB
+ create database EmployeePayrollDB
 USE EMPLOYEEPayrollDB
 
 
@@ -72,6 +72,8 @@ DROP COLUMN ManagerID;
 
 ALTER TABLE Department
 ADD  EmployeeID int;
+ALTER TABLE employee
+ADD  modifieddate date;
 
 
 ALTER TABLE Employee
@@ -81,6 +83,11 @@ ADD CONSTRAINT FK_DesignationId
  ALTER TABLE Employee
 ADD CONSTRAINT FK_DepartmentID
  FOREIGN KEY (DepartmentID) REFERENCES Department(DepartmentID);
+
+ alter table department add  designationid int;
+ alter table department 
+ add constraint fk_designationid_deparment
+foreign key (designationid) REFERENCES Designation(DesignationId)
   
   
   ALTER TABLE salary
@@ -123,6 +130,7 @@ ADD CONSTRAINT FK_PayrollPeriodID
 
 
 INSERT INTO Designation (DesignationName)VALUES('PRESIDENT'),('MANAGER'),('ACCOUNTANT'),('SOFTAWARE RNGINEER');
+INSERT INTO Designation (DesignationName)VALUES('SENIOR'),('INTERMEDIATE'),('JUNOR'),('INTERN');
 insert into Department (DepartmentName) values('IT'),('Finance'),('HUMAN RESOURSES');
 SELECT * FROM Designation;
 SELECT * FROM Employee;
@@ -268,7 +276,6 @@ THROW [ error_number ,
         state ];
 Code language: SQL (Structured Query Language) (sql)
 In this syntax:
-
 error_number
 The error_number is an integer that represents the exception. The error_number must be greater than 50,000 and less than or equal to 2,147,483,647.
 
@@ -324,7 +331,7 @@ GO
 use EmployeePayrollDB
 go
 
-CRE PROC SpCheckEmployeeByID
+CREate PROC SpCheckEmployeeByID
 @Employeeid int,
 @EmployeeExists int output 
 AS
@@ -410,4 +417,369 @@ create proc SpEmployee
  END
 
 
- select * from employee
+ select * from salary
+ 
+
+ alter proc SpEmployeeSalary
+ @EmployeeID int 
+ AS
+ BEGIN
+ SELECT  SUM(NETSALARY) AS TotalSalary ,PayrollPeriodID FROM SALARY WHERE EmployeeID= @EmployeeID group by PayrollPeriodID 
+ End
+
+ exec SpEmployeeSalary  3
+ GO
+ /*
+ create function getage(
+ @dateofbirth date 
+)
+RETURN 
+ AS
+ begin 
+ age =
+ go
+ */
+ -- Create a custom function to calculate total salary
+
+CREATE FUNCTION CalculateTotalSalary (@employee_id INT)
+RETURNS DECIMAL(10, 2)
+AS
+BEGIN
+    DECLARE @total_salary DECIMAL(10, 2);
+
+    SELECT @total_salary = (ISNULL(basICsalary, 0) + ISNULL(Allowances, 0) )- ISNULL(Deductions, 0)
+    FROM SALARY
+    WHERE employeeid = @employee_id;
+
+    RETURN @total_salary;
+END;
+GO
+SELECT DBO.CalculateTotalSalary(4)
+
+
+
+
+ SELECT GETDATE()
+ SELECT DATEADD(DAY,1,GETDATE())
+  SELECT DATEADD(WEEK,1,GETDATE()) AS WEEKS
+  SELECT DATEADD(MONTH,1,GETDATE()) AS MONTHS 
+   SELECT DATEADD(YEAR,1,GETDATE())  AS YEARS
+
+   SELECT DATEDIFF(YEAR,DATEOFBIRTH,GETDATE()) AS AGE ,DateofBirth
+   FROM Employee
+   
+   SELECT DATEOFBIRTH,FIRSTNAME ,
+   Case
+   WHEN DATEADD(YEAR,DATEDIFF(YY,DATEOFBIRTH,GETDATE()),DATEOFBIRTH)> GETDATE()
+   THEN DATEDIFF(YY,DATEOFBIRTH,GETDATE()) -1
+   ELSE 
+   DATEDIFF(YY,DATEOFBIRTH,GETDATE()) END AS AGE
+   FROM EMPLOYEE
+   go
+     
+create function getCountByDepartment(@departmentId NVARCHAR(255))
+returns table 
+AS
+
+return(
+SELECT  COUNT(*)as  noOfEmployee
+   FROM EMPLOYEE
+  WHERE DepartmentID = @departmentID
+  GROUP BY DEPARTMENTID
+
+);
+
+GO
+
+
+DROP FUNCTION DBO.getCountByDepartment
+
+
+SELECT departmentid, COUNT(*)as  noOfEmployee
+  FROM employee
+  GROUP BY DepartmentID;
+
+select leaveid, count(*) as noOfLeave
+from leave
+group by LeaveID
+
+-- Create a custom function to get the number of employees in a specific department
+ALTER FUNCTION GetEmployeeCountInDepartment (@departmentID NVARCHAR(255))
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT COUNT(*) AS employee_count,DepartmentID
+    FROM employee
+    WHERE departmentID = @departmentID
+	GROUP BY DepartmentID
+);
+
+SELECT 
+    * 
+FROM 
+    GetEmployeeCountInDepartment(2);
+
+
+--inline table fuction
+ALTER FUNCTION GETLEAVEDEAILSBYEMPLOYEE(@EMPLOYEEID INT)
+RETURNS TABLE
+AS
+RETURN(
+select LEAVEID ,count(*) as noOfLeave
+from leave
+WHERE EmployeeID= @EMPLOYEEID
+GROUP BY LeaveID
+);
+
+SELECT *FROM GETLEAVEDEAILSBYEMPLOYEE(7)
+
+
+----CREATE indexes
+drop index employee.IdxStartDate
+create  INDEX IdxStartDate
+on employee(hiredate)
+where hiredate >= '2019-01-01' and hiredate <='2023-01-01';
+
+create index idx_employee on employee(EmployeeId);
+
+drop index employee.idx_EmployeeBY_Department
+Create index idx_EmployeeBY_Department
+on employee(departmentid)
+where departmentid = '1';
+
+Create index idx_EmployeeBY_Departmentid
+on employee(departmentid);
+
+
+--Query using an index on the NetSalary column to speed up searching for employees with specific salary ranges
+
+create index idx_salary_specified_range
+on salary(netsalary);
+select * from salary where netsalary >= 30000 and  netsalary <= 50000
+
+
+create index idx_employee_by_designation
+on designation(designationname)
+
+select * from Employee
+
+
+---create view
+--CREATE VIEW [view_name] AS
+--SELECT column1, column2, ...
+--FROM table_name
+--WHERE condition;
+
+--Query using a view to get employees who have taken leaves within a specific date range
+--Query using a view to get employees with their respective department and designation names
+
+go
+create view [employee_leave] as
+select e.FirstName, e.LastName,l.LeaveID  from Employee as e right join leave as l on e.EmployeeID = l.EmployeeID
+where l.StartDate >= '2023-05-10' and l.EndDate <='2023-05-14';
+go
+SELECT * FROM [employee_leave];
+go
+create view [employee_department_details] as 
+select e.EmployeeID,e.FirstName,e.LastName,dep.DepartmentName,deg.DesignationName                    
+from employee as e inner join department as dep on e.DepartmentID = dep.DepartmentID inner join Designation as deg on e.designationid= deg.DesignationId
+
+select * from[employee_department_details];
+
+
+---triggers
+CREATE TRIGGER tr_UpdateHireDate
+ON Employee
+AFTER INSERT
+AS
+BEGIN
+    
+    UPDATE Employee
+    SET HireDate = GETDATE() 
+    WHERE EmployeeID IN (SELECT EmployeeID FROM INSERTED);
+END;
+go
+--TRIGGER FOR UPDATE
+create TRIGGER tr_UpdateModifiedDate
+ON Employee
+AFTER UPDATE
+AS
+BEGIN
+    
+    UPDATE Employee
+    SET modifieddate = GETDATE() 
+    WHERE EmployeeID IN (SELECT EmployeeID FROM INSERTED);
+	print 'user data updated'
+END;
+go
+create TRIGGER tr_deleteSalaryOFemployee
+ON Employee
+AFTER delete
+AS
+BEGIN
+    
+    delete from salary 
+    WHERE EmployeeID IN (SELECT EmployeeID FROM deleted);
+	print 'user data deleted'
+END;
+go
+--Trigger to enforce a constraint where the EndDate of a leave must be greater than or equal to the StartDate
+
+CREATE TRIGGER tr_EnforceLeaveConstraint
+ON Leave
+INSTEAD OF INSERT
+AS
+BEGIN 
+    
+    IF EXISTS (
+        SELECT 1
+        FROM INSERTED
+        WHERE EndDate < StartDate
+    )
+	
+    BEGIN 
+        
+       PRINT 'EndDate must be greater than or equal to StartDate.';
+    END 
+    ELSE
+    BEGIN
+       
+        INSERT INTO Leave (StartDate, EndDate)
+        SELECT StartDate, EndDate
+        FROM INSERTED;
+    END
+	END;
+GO
+
+DELETE FROM Employee
+WHERE EmployeeID = 13 ;
+select * from employee;
+select * from salary;
+GO
+ -- Insert a default salary record for the new employee
+CREATE TRIGGER tr_AutoInsertSalary
+ON Employee
+AFTER INSERT
+AS
+BEGIN
+   
+    INSERT INTO Salary (EmployeeID, BasicSalary)
+    SELECT EmployeeID, 25000
+    FROM INSERTED;
+END;
+GO
+--
+
+
+--Cursors
+DECLARE @FirstName NVARCHAR(255)
+DECLARE EmployeeCursor CURSOR FOR
+SELECT FirstName
+FROM Employee
+
+OPEN EmployeeCursor
+
+FETCH NEXT FROM EmployeeCursor INTO @FirstName
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    PRINT @FirstName 
+    FETCH NEXT FROM EmployeeCursor INTO @FirstName
+END
+
+CLOSE EmployeeCursor
+DEALLOCATE EmployeeCursor
+go
+
+
+---2 Query using a cursor to update the basic salary of all employees by a certain percentage
+declare @basicsalary bigint 
+declare @total bigint
+declare @increase decimal(4,2)
+declare @employeeid int
+set @increase =10.00
+declare incrementsalaryCursor cursor for 
+select employeeid, basicsalary 
+from salary
+open incrementsalaryCursor
+
+
+fetch next from incrementsalaryCursor into @employeeid, @basicsalary 
+while @@fetch_status =0
+begin 
+--set @basicsalary =@basicsalary +@increase
+set @total = (@BasicSalary * (1 + (@Increase / 100)))
+print @total
+fetch next from incrementsalaryCursor into @employeeid, @basicsalary 
+
+end
+close incrementsalaryCursor
+deallocate incrementsalaryCursor
+go
+  select * from salary
+go
+
+--5 Query using a cursor to calculate the total salary for each employee and display the results
+
+declare @basicsalary bigint
+declare @allowance int
+declare @deduction int 
+declare @total int 
+declare @employeeid int
+declare cr_totalsalary cursor for 
+select EmployeeID, basicsalary 
+from salary
+open cr_totalsalary
+fetch next from  cr_totalsalary into  @employeeid , @basicsalary  
+while @@FETCH_STATUS=0
+begin
+set @allowance = (@basicsalary * (0.3))
+set @deduction = (@basicsalary * (0.15))
+set @total =((@basicsalary+@allowance)-(@deduction))
+PRINT @employeeid print  @basicsalary print @total
+fetch next from  cr_totalsalary into  @employeeid , @basicsalary 
+end
+close cr_totalsalary
+deallocate cr_totalsalary
+go
+
+--Query using a cursor to update employee designations based on their years of service
+
+declare @serviceyears int
+declare @hiredate date 
+DECLARE @NEWdesignationid INT
+DECLARE @EMPLOYEEID INT
+DECLARE @designationid INT
+declare cr_promoteemployee cursor for 
+select EmployeeId , hiredate, designationid 
+from Employee
+open cr_promoteemployee
+fetch next from cr_promoteemployee into @employeeid,@hiredate,@designationid
+while @@FETCH_STATUS=0
+begin
+
+  set  @serviceyears =  DATEDIFF(YEAR,@hiredate,GETDATE())
+
+IF @serviceyears <2
+BEGIN
+SET @designationid = 7
+END
+ELSE iF  @serviceyears  >= 2 AND @serviceyears <= 6
+BEGIN
+  SET @designationid = 6   
+END
+ELSE  
+BEGIN
+ SET @designationid = 7  
+END
+ --UPDATE EMPLOYEE  SET DesignationId= @NEWdesignationid WHERE EmployeeID= @employeeid
+ PRINT  @designationid  PRINT  +@employeeid
+fetch next from cr_promoteemployee into @employeeid,@hiredate,@designationid
+End 
+
+close cr_promoteemployee
+deallocate cr_promoteemployee
+
+select * from employee
+

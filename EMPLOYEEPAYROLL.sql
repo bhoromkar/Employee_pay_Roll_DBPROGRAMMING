@@ -115,7 +115,7 @@ ADD CONSTRAINT FK_PayrollPeriodID
  FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID);
  
  --YYYY-MM-DD.
- insert into Employee (FirstName,LastName,DateofBirth,EmpAddress,ContactNumber,Email,DesignationId,DepartmentID )
+ insert into Employee (FirstName,LastName,DateofBirth,EmpAddress,ContactNumber,HireDate,Email,DesignationId,DepartmentID )
  values('john' ,'smith', '1985-02-12','LONDON',21651661,'2016-12-10','JOHNSMITH@MAIL.COM' ,1,1),
 		('CHRIS' ,'LYNN', '1995-04-21','NEWYORK',55645645,'2018-02-10','CHRISLYNN@MAIL.COM' ,2,1),
 		('ROHIT' ,'KUMAR', '1990-05-11','DELHI',564646446,'2019-06-20','ROHITKUMAR@MAIL.COM' ,4,1),
@@ -368,7 +368,7 @@ ELSE
 --Employee ID of a person and checks if it is in the table. There are two
 --conditions It will create a new record if the Employee It is not stored in the table
      ---If the record is already in the table, it willupdate that
-
+go
 create proc SpEmployee
 	@Employeeid int,
  @firstname varchar(255),
@@ -419,7 +419,7 @@ create proc SpEmployee
 
  select * from salary
  
-
+ go
  alter proc SpEmployeeSalary
  @EmployeeID int 
  AS
@@ -440,7 +440,7 @@ RETURN
  go
  */
  -- Create a custom function to calculate total salary
-
+ go
 CREATE FUNCTION CalculateTotalSalary (@employee_id INT)
 RETURNS DECIMAL(10, 2)
 AS
@@ -710,6 +710,7 @@ while @@fetch_status =0
 begin 
 --set @basicsalary =@basicsalary +@increase
 set @total = (@BasicSalary * (1 + (@Increase / 100)))
+UPDATE salary  SET BasicSalary= @total WHERE EmployeeID= @employeeid
 print @total
 fetch next from incrementsalaryCursor into @employeeid, @basicsalary 
 
@@ -763,23 +764,153 @@ begin
 
 IF @serviceyears <2
 BEGIN
-SET @designationid = 7
+SET @newdesignationid = 7
 END
 ELSE iF  @serviceyears  >= 2 AND @serviceyears <= 6
 BEGIN
-  SET @designationid = 6   
+  SET @newdesignationid = 6   
 END
 ELSE  
 BEGIN
- SET @designationid = 7  
+ SET @NEWdesignationid =8
 END
- --UPDATE EMPLOYEE  SET DesignationId= @NEWdesignationid WHERE EmployeeID= @employeeid
- PRINT  @designationid  PRINT  +@employeeid
+ UPDATE EMPLOYEE  SET DesignationId= @NEWdesignationid WHERE EmployeeID= @employeeid
+ PRINT  @designationid  PRINT  @employeeid
 fetch next from cr_promoteemployee into @employeeid,@hiredate,@designationid
 End 
 
 close cr_promoteemployee
 deallocate cr_promoteemployee
 
-select * from employee
+select * from department
 
+
+
+insert into Employee (FirstName,LastName,DateofBirth,EmpAddress,ContactNumber,HireDate,Email,DepartmentID )
+ values('bjvjv' ,'vkjvjk', '1984-10-18','dubai',5456611,'2018-02-01','Jih@MAIL.COM' ,'6,5')
+ insert into Department (DepartmentName) values('default')
+/* INSERT INTO Employee (employeeid) VALUES (13);
+
+-- Insert department details
+INSERT INTO employee (departmentid) VALUES (6,5);
+SET IDENTITY_INSERT Employee on;
+
+INSERT INTO Employee (employeeid) VALUES (13);
+
+-- Insert department details
+INSERT INTO Department (departmentid) VALUES (6),(5);
+SET IDENTITY_INSERT Department on; 
+-- Insert employee's departments
+INSERT INTO Department (EmployeeID, departmentid)
+SELECT e.EmployeeID, d.departmentid
+FROM Department e
+CROSS JOIN Department d
+WHERE e.EmployeeID= 'JOFRA'
+  AND d.departmentid IN (6, 5);
+
+SET IDENTITY_INSERT Department on;  
+*/
+--Cursor to assign a default department for employees who don't have one:
+   --Suppose we have a Department table with a default department (DepartmentID = 1) representing employees without an assigned department.
+   --We want to check if any employees have a NULL DepartmentID and assign them to the default department.
+   go
+   declare @employeeid int
+   declare @departmentid int
+   DECLARE @DEFAULTID INT
+   SET @DEFAULTID = 4
+   declare cr_defaultdeparment cursor for
+   select  employeeid ,departmentid from Employee where departmentid is null
+  
+   open cr_defaultdeparment
+   fetch next from cr_defaultdeparment into @employeeid ,@departmentid
+while @@FETCH_STATUS=0
+begin 
+ UPDATE Employee
+    SET DepartmentID = @DefaultID
+    WHERE EmployeeID = @employeeid
+PRINT @employeeid  PRINT @DefaultID
+ fetch next from cr_defaultdeparment into @employeeid ,@departmentid
+ END
+ close cr_defaultdeparment
+deallocate cr_defaultdeparment
+go
+
+
+DECLARE @EmployeeID INT;
+DECLARE @DefaultDepartmentID INT;
+SET @DefaultDepartmentID = 4;
+
+-- Declare the cursor
+DECLARE employee_cursor CURSOR FOR
+SELECT EmployeeID
+FROM Employee
+WHERE DepartmentID IS NULL;
+
+-- Open the cursor
+OPEN employee_cursor;
+
+-- Fetch the first employee
+FETCH NEXT FROM employee_cursor INTO @EmployeeID;
+
+-- Loop through the employees
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    -- Update the DepartmentID for the current employee
+    UPDATE Employee
+    SET DepartmentID = @DefaultDepartmentID
+    WHERE EmployeeID = @EmployeeID;
+
+    -- Fetch the next employee
+    FETCH NEXT FROM employee_cursor INTO @EmployeeID;
+END;
+
+-- Close and deallocate the cursor
+CLOSE employee_cursor;
+DEALLOCATE employee_cursor;
+go
+
+select * from designation
+select * from employee
+-----subqueries
+
+--Query to get employees who have salaries greater than the average salary in their department
+
+--select * from deparment
+SELECT e.employeeid ,e.firstname,e.lastname,s.BasicSalary
+FROM employee e
+JOIN department d ON e.departmentid = d.departmentid
+join salary s  on e.EmployeeID= s.EmployeeID
+WHERE s.BasicSalary > (SELECT AVG(BasicSalary) as avgsalary FROM salary WHERE d.departmentid = e.departmentid)
+
+--Query to retrieve employees who have taken leaves longer than the average leave duration+
+SELECT  e.employeeid ,e.firstname,e.lastname,l.leaveid, DATEDIFF(day, startdate, enddate) + 1 AS leave_duration
+FROM employee e
+join Leave l on e.EmployeeID= l.employeeid
+WHERE (DATEDIFF(day, startdate, enddate) + 1) > (SELECT AVG(DATEDIFF(day, startdate, enddate) + 1) FROM Leave)
+
+--
+
+  SELECT e.employeeid, e.FirstName,  d.departmentname
+FROM employee AS e
+INNER JOIN department AS d ON e.departmentid = d.departmentid
+join salary s  on e.EmployeeID= s.EmployeeID
+WHERE s.basicsalary >= (SELECT MAX(basicsalary)*0.9 FROM salary WHERE d.departmentid = e.departmentid)
+
+
+
+CREATE TABLE EmployeeDepartments (
+    EmployeeID INT,
+    DepartmentID INT,
+    PRIMARY KEY (EmployeeID, DepartmentID),
+    FOREIGN KEY (EmployeeID) REFERENCES Employee(EmployeeID),
+    FOREIGN KEY (DepartmentID) REFERENCES Department(DepartmentID)
+);
+
+
+
+-- Associate employee with departments
+INSERT INTO EmployeeDepartments (EmployeeID, DepartmentID)
+VALUES (1, 1),
+       (1, 3); 
+
+	   select * from Employee
